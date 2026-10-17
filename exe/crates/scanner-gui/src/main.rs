@@ -2,10 +2,16 @@
 
 use eframe::egui;
 use scanner_core::{run_scan, ScanEvent, ScanReport};
-use std::sync::{
-    atomic::{AtomicBool, Ordering},
-    mpsc::{self, Receiver},
-    Arc,
+use std::{
+    fs::{self, OpenOptions},
+    io::Write,
+    path::PathBuf,
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        mpsc::{self, Receiver},
+        Arc,
+    },
+    time::SystemTime,
 };
 
 mod embedded_agent {
@@ -14,6 +20,130 @@ mod embedded_agent {
 
 #[used]
 static NATIVE_BUILD_ID: &str = "MCS_NATIVE_RUST_SCANNER_V8";
+
+const EMBEDDED_ICON: &[u8] = include_bytes!("../../../assets/scanner.ico");
+
+struct StartupLog {
+    path: Option<PathBuf>,
+}
+
+impl StartupLog {
+    fn initialize() -> Self {
+        let mut candidates = Vec::new();
+        if let Some(path) = std::env::var_os("MCS_DIAGNOSTICS_DIR") {
+            candidates.push(PathBuf::from(path));
+        }
+        if let Some(path) = std::env::var_os("LOCALAPPDATA") {
+            candidates.push(
+                PathBuf::from(path)
+                    .join("MinecraftCheatScanner")
+                    .join("Logs"),
+            );
+        }
+        candidates.push(
+            std::env::temp_dir()
+                .join("MinecraftCheatScanner")
+                .join("Logs"),
+        );
+
+        for directory in candidates {
+            if fs::create_dir_all(&directory).is_err() {
+                continue;
+            }
+            let path = directory.join("startup.log");
+            if fs::metadata(&path).is_ok_and(|metadata| metadata.len() > 1024 * 1024) {
+                let _ = fs::write(&path, b"");
+            }
+            if OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open(&path)
+                .is_ok()
+            {
+                return Self { path: Some(path) };
+            }
+        }
+        Self { path: None }
+    }
+
+    fn record(&self, stage: &str, message: &str) {
+        let safe_message = redact_user_paths(message);
+        let elapsed = SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_secs();
+        let line = format!("{elapsed} [{stage}] {safe_message}\r\n");
+        if let Some(path) = &self.path {
+            if let Ok(mut file) = OpenOptions::new().create(true).append(true).open(path) {
+                if file.write_all(line.as_bytes()).is_ok() {
+                    return;
+                }
+            }
+        }
+        eprintln!("{line}");
+    }
+
+    fn is_available(&self) -> bool {
+        self.path.is_some()
+    }
+}
+
+fn redact_user_paths(message: &str) -> String {
+    let mut redacted = message.to_owned();
+    for name in ["USERPROFILE", "LOCALAPPDATA", "APPDATA"] {
+        if let Some(path) = std::env::var_os(name) {
+            let path = PathBuf::from(path).to_string_lossy().into_owned();
+            if !path.is_empty() {
+                redacted = redacted.replace(&path, "<user-path>");
+                redacted = redacted.replace(&path.replace('\\', "/"), "<user-path>");
+            }
+        }
+    }
+    redacted
+}
+
+fn validate_embedded_app_resources(log: &StartupLog) -> Result<String, String> {
+    if EMBEDDED_ICON.len() < 6 || EMBEDDED_ICON[..4] != [0, 0, 1, 0] {
+        return Err("embedded application icon is missing or invalid".into());
+    }
+    log.record("resources", "embedded application icon validated");
+
+    let (catalog_version, signatures) = scanner_core::validate_embedded_catalog()
+        .map_err(|error| format!("embedded signature catalog validation failed: {error}"))?;
+    log.record(
+        "scanner-core",
+        &format!("embedded signature catalog validated; {signatures} entries"),
+    );
+
+    let agent_status = match embedded_agent::EMBEDDED_AGENT {
+        Some(agent) if is_x64_dll(agent) => {
+            log.record(
+                "resources",
+                "embedded optional JVMTI agent validated as x64 DLL",
+            );
+            "available and valid"
+        }
+        Some(_) => return Err("embedded JVMTI agent is not a valid x64 DLL".into()),
+        None => {
+            log.record(
+                "resources",
+                "optional JVMTI agent is not embedded in this build",
+            );
+            "not embedded (optional)"
+        }
+    };
+
+    let _context = egui::Context::default();
+    let _application_state = ScannerApp::default();
+    log.record(
+        "gui",
+        "egui context and application state initialized; no native window was opened",
+    );
+
+    Ok(format!(
+        "self-test passed; signature catalog {catalog_version} ({signatures} entries); JVMTI agent {agent_status}; GUI state initialized"
+    ))
+}
 
 #[derive(Default)]
 struct AppState {
@@ -196,14 +326,73 @@ fn is_x64_dll(bytes: &[u8]) -> bool {
     machine == 0x8664 && characteristics & 0x2000 != 0
 }
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() {
+    let diagnostics = StartupLog::initialize();
+    diagnostics.record("startup", "native Rust scanner entry point reached");
+    if !diagnostics.is_available() {
+        diagnostics.record(
+            "diagnostics",
+            "startup log file unavailable; attempting fallback diagnostics output",
+        );
+    }
+
+    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        run_application(&diagnostics)
+    }));
+    match result {
+        Ok(Ok(())) => {}
+        Ok(Err(error)) => {
+            diagnostics.record("fatal", &error);
+            eprintln!(
+                "Minecraft Cheat Scanner startup failed: {}",
+                redact_user_paths(&error)
+            );
+            std::process::exit(1);
+        }
+        Err(payload) => {
+            let message = payload
+                .downcast_ref::<String>()
+                .map(String::as_str)
+                .or_else(|| payload.downcast_ref::<&str>().copied())
+                .unwrap_or("unknown panic payload");
+            diagnostics.record("fatal", &format!("startup panic: {message}"));
+            std::process::exit(1);
+        }
+    }
+}
+
+fn run_application(diagnostics: &StartupLog) -> Result<(), String> {
     let _ = tracing_subscriber::fmt().with_env_filter("info").try_init();
     tracing::info!(build_id = NATIVE_BUILD_ID, "native Rust scanner started");
-    if std::env::args().any(|arg| arg == "--scan-once") {
-        run_scan(Arc::new(AtomicBool::new(false)), |_| {})
-            .map_err(|error| std::io::Error::other(error))?;
+    diagnostics.record(
+        "configuration",
+        "using embedded resources and built-in defaults; no external configuration required",
+    );
+    let (catalog_version, signature_count) = scanner_core::validate_embedded_catalog()
+        .map_err(|error| format!("scanner-core initialization failed: {error}"))?;
+    diagnostics.record(
+        "scanner-core",
+        &format!("initialized embedded catalog {catalog_version} with {signature_count} entries"),
+    );
+    let self_test_summary = validate_embedded_app_resources(diagnostics)?;
+
+    let args: Vec<String> = std::env::args().skip(1).collect();
+    if args.iter().any(|arg| arg == "--self-test") {
+        diagnostics.record("self-test", "headless startup checks beginning");
+        diagnostics.record("self-test", &format!("PASS: {self_test_summary}"));
+        println!("{self_test_summary}; interactive window startup is not tested by this mode");
         return Ok(());
     }
+
+    if args.iter().any(|arg| arg == "--scan-once") {
+        diagnostics.record("scanner-core", "initializing one-shot scan");
+        run_scan(Arc::new(AtomicBool::new(false)), |_| {})
+            .map_err(|error| format!("one-shot scan failed: {error}"))?;
+        diagnostics.record("scanner-core", "one-shot scan and reports completed");
+        return Ok(());
+    }
+
+    diagnostics.record("gui", "creating native eframe window and event loop");
     let opts = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
             .with_inner_size([780.0, 650.0])
@@ -217,13 +406,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             cc.egui_ctx.set_visuals(egui::Visuals::dark());
             Ok(Box::<ScannerApp>::default())
         }),
-    )?;
+    )
+    .map_err(|error| format!("native GUI initialization/event loop failed: {error}"))?;
+    diagnostics.record("gui", "native GUI event loop returned normally");
     Ok(())
 }
 
 #[cfg(test)]
 mod tests {
-    use super::is_x64_dll;
+    use super::{is_x64_dll, EMBEDDED_ICON};
 
     fn synthetic_pe(machine: u16, characteristics: u16) -> Vec<u8> {
         let mut bytes = vec![0u8; 0x100];
@@ -252,5 +443,25 @@ mod tests {
         let mut malformed = synthetic_pe(0x8664, 0x2022);
         malformed[0x3c..0x40].copy_from_slice(&u32::MAX.to_le_bytes());
         assert!(!is_x64_dll(&malformed));
+    }
+
+    #[test]
+    fn embedded_icon_has_valid_ico_header() {
+        assert!(EMBEDDED_ICON.len() >= 6);
+        assert_eq!(&EMBEDDED_ICON[..4], &[0, 0, 1, 0]);
+        assert_ne!(u16::from_le_bytes([EMBEDDED_ICON[4], EMBEDDED_ICON[5]]), 0);
+    }
+
+    #[test]
+    fn startup_diagnostics_redact_known_user_paths() {
+        let original = std::env::var_os("USERPROFILE");
+        if let Some(path) = original {
+            let path = std::path::PathBuf::from(path)
+                .to_string_lossy()
+                .into_owned();
+            let redacted = super::redact_user_paths(&format!("failure at {path}"));
+            assert!(!redacted.contains(&path));
+            assert!(redacted.contains("<user-path>"));
+        }
     }
 }

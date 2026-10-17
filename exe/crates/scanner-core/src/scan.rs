@@ -110,6 +110,13 @@ fn load_catalog() -> Result<Catalog, String> {
     // depend on a neighboring signatures.json that could be stale or altered.
     embedded_catalog()
 }
+
+/// Validate the compiled-in signature catalog without starting a filesystem scan.
+/// Used by the native application's headless startup self-test.
+pub fn validate_embedded_catalog() -> Result<(String, usize), String> {
+    let catalog = load_catalog()?;
+    Ok((catalog.catalog_version, catalog.entries.len()))
+}
 fn user_name() -> String {
     env::var("USERNAME")
         .or_else(|_| env::var("USER"))

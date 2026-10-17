@@ -10,4 +10,4 @@ pub mod scan;
 pub mod signatures;
 
 pub use model::{Coverage, CoverageStatus, Finding, ProcessRecord, ScanReport};
-pub use scan::{run_scan, ScanEvent};
+pub use scan::{run_scan, validate_embedded_catalog, ScanEvent};
