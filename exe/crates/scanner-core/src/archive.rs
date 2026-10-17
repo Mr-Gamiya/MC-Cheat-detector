@@ -48,7 +48,7 @@ fn read_bounded<R: Read + Seek>(
     name: &str,
 ) -> Result<Option<Vec<u8>>, ArchiveError> {
     match zip.by_name(name) {
-        Ok(mut e) => {
+        Ok(e) => {
             if e.size() > MAX_METADATA_BYTES {
                 return Err(ArchiveError::Limit);
             }
@@ -118,12 +118,13 @@ fn inspect_archive<R: Read + Seek>(
     let metadata = take_metadata(&mut zip)?;
     let mut nested_bytes = 0u64;
     for i in 0..zip.len() {
-        let mut entry = zip.by_index(i)?;
+        let entry = zip.by_index(i)?;
+        let name = entry.name()?.into_owned();
         *expanded = expanded.saturating_add(entry.size());
         if *expanded > MAX_EXPANDED_BYTES {
             return Err(ArchiveError::Limit);
         }
-        if depth >= 1 || !entry.name().to_ascii_lowercase().ends_with(".jar") {
+        if depth >= 1 || !name.to_ascii_lowercase().ends_with(".jar") {
             continue;
         }
         if entry.size() > MAX_NESTED_BYTES {
@@ -133,7 +134,6 @@ fn inspect_archive<R: Read + Seek>(
         if nested_bytes > MAX_NESTED_BYTES {
             continue;
         }
-        let name = entry.name().to_owned();
         let mut bytes = Vec::with_capacity(entry.size() as usize);
         entry.take(MAX_NESTED_BYTES + 1).read_to_end(&mut bytes)?;
         if bytes.len() as u64 > MAX_NESTED_BYTES {

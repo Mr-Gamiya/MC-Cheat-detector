@@ -7,7 +7,6 @@ use crate::{
 use chrono::{DateTime, Utc};
 use std::{
     env,
-    path::PathBuf,
     sync::{
         atomic::{AtomicBool, Ordering},
         Arc,

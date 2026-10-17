@@ -163,7 +163,7 @@ pub fn inspect_startup_agent(process: &mut ProcessRecord) -> Result<bool, String
                 std::io::Error::last_os_error()
             ));
         }
-        let result = (|| {
+        let result: Result<AgentEnvelope, String> = (|| -> Result<AgentEnvelope, String> {
             let mut frame = (payload.len() as u32).to_le_bytes().to_vec();
             frame.extend_from_slice(payload.as_bytes());
             write_overlapped(h, &frame)?;
@@ -224,6 +224,7 @@ const WAIT_OBJECT_0: u32 = 0;
 const WAIT_TIMEOUT: u32 = 258;
 #[cfg(windows)]
 #[repr(C)]
+#[derive(Clone, Copy)]
 struct Offset {
     offset: u32,
     offset_high: u32,
