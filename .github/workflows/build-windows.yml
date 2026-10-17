@@ -1,0 +1,131 @@
+name: Native Windows scanner
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'exe/**'
+      - 'MIGRATION-PLAN.md'
+      - '.github/workflows/build-windows.yml'
+  pull_request:
+    paths:
+      - 'exe/**'
+      - 'MIGRATION-PLAN.md'
+      - '.github/workflows/build-windows.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  build-x64:
+    runs-on: windows-2022
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Install Rust stable and components
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+          components: rustfmt, clippy
+
+      - name: Configure MSVC x64 environment
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Install JDK for the optional JVMTI agent
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '26'
+          architecture: x64
+
+      - name: Resolve and fetch Cargo dependencies
+        working-directory: exe
+        shell: pwsh
+        run: |
+          if (Test-Path Cargo.lock) {
+            cargo generate-lockfile --locked
+          } else {
+            cargo generate-lockfile
+          }
+          if ($LASTEXITCODE -ne 0) { throw "Cargo.lock generation/validation failed: $LASTEXITCODE" }
+          cargo fetch --locked -vv
+          if ($LASTEXITCODE -ne 0) { throw "cargo fetch failed: $LASTEXITCODE" }
+          cargo metadata --locked --format-version 1 --no-deps | Out-Null
+          if ($LASTEXITCODE -ne 0) { throw "Cargo.lock/workspace metadata validation failed: $LASTEXITCODE" }
+
+      - name: Publish resolved Cargo.lock for review and commit
+        uses: actions/upload-artifact@v4
+        with:
+          name: Minecraft-Cheat-Scanner-Cargo-lock
+          path: exe/Cargo.lock
+          if-no-files-found: error
+
+      - name: Format, lint, test, build and verify native EXE
+        shell: pwsh
+        env:
+          MCS_REQUIRE_AGENT: '1'
+        run: |
+          & .\exe\build-release.ps1
+          if ($LASTEXITCODE -ne 0) { throw "Native release build failed: $LASTEXITCODE" }
+          $exe = Resolve-Path -LiteralPath .\exe\dist\Minecraft-Cheat-Scanner.exe -ErrorAction Stop
+          $bytes = [IO.File]::ReadAllBytes($exe.Path)
+          if ($bytes.Length -lt 256 -or $bytes[0] -ne 0x4d -or $bytes[1] -ne 0x5a) { throw 'Output is not a Windows PE executable.' }
+          $peOffset = [BitConverter]::ToInt32($bytes, 0x3c)
+          if ($peOffset -lt 64 -or $peOffset + 6 -gt $bytes.Length -or [BitConverter]::ToUInt32($bytes, $peOffset) -ne 0x00004550 -or [BitConverter]::ToUInt16($bytes, $peOffset + 4) -ne 0x8664) { throw 'Output is not a valid x64 Windows PE executable.' }
+          $imageText = [Text.Encoding]::ASCII.GetString($bytes)
+          if (-not $imageText.Contains('MCS_NATIVE_RUST_SCANNER_V8')) { throw 'Native Rust build marker is missing; refusing to package a compatibility launcher.' }
+          if ($imageText -match '(?i)(scan-cheats\.ps1|powershell\.exe|pwsh\.exe|Run-Scanner\.cmd)') { throw 'The binary contains a forbidden legacy scanner/launcher reference.' }
+          Write-Host "Verified native Rust x64 EXE: $($exe.Path)"
+
+      - name: Run copied EXE in an isolated folder and verify reports
+        shell: pwsh
+        run: |
+          $isolated = Join-Path $env:RUNNER_TEMP 'mcs-isolated-smoke'
+          New-Item -ItemType Directory -Path $isolated -Force | Out-Null
+          $isolatedExe = Join-Path $isolated 'Minecraft-Cheat-Scanner.exe'
+          Copy-Item -LiteralPath .\exe\dist\Minecraft-Cheat-Scanner.exe -Destination $isolatedExe
+          $scan = Start-Process -FilePath $isolatedExe -ArgumentList '--scan-once' -WorkingDirectory $isolated -PassThru
+          $children = [System.Collections.Generic.HashSet[int]]::new()
+          $deadline = [DateTime]::UtcNow.AddMinutes(3)
+          while (-not $scan.HasExited -and [DateTime]::UtcNow -lt $deadline) {
+            Get-CimInstance Win32_Process -Filter "ParentProcessId = $($scan.Id)" -ErrorAction Stop | ForEach-Object { [void]$children.Add([int]$_.ProcessId) }
+            if ($scan.WaitForExit(100)) { break }
+          }
+          if (-not $scan.HasExited) { $scan.Kill(); throw 'Isolated native scan timed out.' }
+          if ($scan.ExitCode -ne 0) { throw "Isolated native scan failed with exit code $($scan.ExitCode)." }
+          if ($children.Count -gt 0) { throw "Scanner started child process(es), forbidden for the native scan: $($children -join ', ')" }
+          $reports = Join-Path $isolated 'Reports'
+          foreach ($extension in @('.txt','.html','.json','-diagnostics.log')) {
+            if (-not (Get-ChildItem -LiteralPath $reports -File -Filter "*$extension" -ErrorAction SilentlyContinue)) { throw "Isolated scan did not generate report type $extension." }
+          }
+          $scripts = Get-ChildItem -LiteralPath $isolated -File -Recurse | Where-Object { $_.Extension -in @('.ps1','.cmd','.bat','.sh') }
+          if ($scripts) { throw 'The isolated application unexpectedly requires or created a shell script.' }
+          Write-Host "Isolated native scan passed; reports: $reports"
+
+      - name: Verify native GUI starts
+        shell: pwsh
+        run: |
+          $gui = Start-Process -FilePath (Resolve-Path .\exe\dist\Minecraft-Cheat-Scanner.exe) -PassThru
+          if (-not $gui.WaitForInputIdle(15000)) { if (-not $gui.HasExited) { $gui.Kill() }; throw 'Native GUI did not reach its message loop.' }
+          Start-Sleep -Seconds 3
+          $gui.Refresh()
+          if ($gui.HasExited) { throw "Native GUI exited during startup with code $($gui.ExitCode)." }
+          $gui.Kill()
+          $gui.WaitForExit()
+          Write-Host 'Native GUI startup smoke check passed.'
+
+      - name: Smoke-test startup JVMTI agent with standalone Java fixture
+        shell: pwsh
+        run: |
+          powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\exe\tests\agent-smoke.ps1 -JdkRoot $env:JAVA_HOME
+          if ($LASTEXITCODE -ne 0) { throw "JVMTI standalone smoke test failed: $LASTEXITCODE" }
+
+      - name: Upload standalone Rust application
+        uses: actions/upload-artifact@v4
+        with:
+          name: Minecraft-Cheat-Scanner-windows-x64
+          path: exe/dist/Minecraft-Cheat-Scanner.exe
+          if-no-files-found: error

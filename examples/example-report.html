@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Minecraft Cheat Scanner Report (Example)</title>
+<style>body{font:16px Segoe UI,Arial,sans-serif;max-width:960px;margin:2rem auto;padding:0 1rem;color:#222}table{border-collapse:collapse;width:100%}th,td{border:1px solid #bbb;padding:.5rem;text-align:left}th{background:#eee}.incomplete{color:#8a5700}</style></head>
+<body>
+<h1>Minecraft Cheat Scanner 6.0.1</h1>
+<p><strong>Example report</strong> · 2026-01-01 12:00 UTC · 1.42 seconds</p>
+<p>No confirmed cheat signature found; this scan cannot prove the system is clean.</p>
+<h2>Coverage</h2>
+<table><thead><tr><th>Check</th><th>Status</th><th>Detail</th></tr></thead><tbody>
+<tr><td>Minecraft process detection</td><td>Completed</td><td>Found 1 Minecraft process</td></tr>
+<tr class="incomplete"><td>VM.classloader_stats PID 4242</td><td>Failed</td><td>Attach not supported by this JVM</td></tr>
+<tr><td>Mod archive scan</td><td>Completed</td><td>JAR count=12, file limit=5000</td></tr>
+</tbody></table>
+<h2>Findings</h2>
+<table><thead><tr><th>Category</th><th>Finding</th><th>Evidence</th></tr></thead><tbody>
+<tr><td>Scan Incomplete</td><td>VM.classloader_stats unavailable for PID 4242</td><td>Attach not supported by this JVM</td></tr>
+<tr><td>Informational</td><td>No active threat signature matched</td><td>This is not proof that the system is clean.</td></tr>
+</tbody></table>
+<h2>Limitations</h2>
+<p>Renamed, encrypted, injected, or memory-only cheats may not be detected. Installed mods do not prove which mods were loaded in the active game. The scan is read-only.</p>
+</body></html>

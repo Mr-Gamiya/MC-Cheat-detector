@@ -1,0 +1,1068 @@
+{
+    "schemaVersion":  2,
+    "catalogVersion":  "2026-10-16.6",
+    "catalogNotes":  "v7.2 coverage review: Doomsday has no verified hash, metadata id, class/package identifier, agent marker, or native module signature in this catalog. No synthetic signature was added. Client naming/product references are coverage context, not detection evidence.",
+    "policy":  "Only exact SHA-256 hashes computed from reproducibly identified upstream release artifacts may be listed. OfficialSourceHashed records have source-derived identity but no separate corroborating digest; IndependentlyVerified additionally has independent sample corroboration. No filename or metadata-only records are permitted.",
+    "reviewedSources":  [
+                            {
+                                "name":  "Meteor Client official version archive",
+                                "source":  "https://meteorclient.com/archive",
+                                "hashAssessment":  "Builds listed in the official archive were fetched from the official versioned API and hashed locally in memory on 2026-10-16. Only build 1.21.11-86 has an independent report corroboration."
+                            },
+                            {
+                                "name":  "LiquidBounce official releases",
+                                "source":  "https://liquidbounce.net/download/",
+                                "hashAssessment":  "Release page identifies builds but did not expose a reproducible static JAR checksum in reviewed content."
+                            },
+                            {
+                                "name":  "Wurst official wiki",
+                                "source":  "https://wurst.wiki/start",
+                                "hashAssessment":  "Project identity/source links reviewed; no static release JAR checksum was exposed."
+                            }
+                        ],
+    "clients":  [
+                    {
+                        "name":  "Meteor Client",
+                        "category":  "Mod-based or hacked client",
+                        "knownVersions":  [
+                                              "1.21.5-54",
+                                              "1.21.6-7",
+                                              "1.21.7-4",
+                                              "1.21.8-69",
+                                              "1.21.10-57",
+                                              "1.21.11-86"
+                                          ],
+                        "supportedMinecraftVersions":  "1.21.5, 1.21.6, 1.21.7, 1.21.8, 1.21.10, 1.21.11 (hash catalog only)",
+                        "distributionFormats":  [
+                                                    "Fabric mod JAR"
+                                                ],
+                        "verifiedSha256Available":  true,
+                        "signatureStatus":  "Official source hashed; one digest independently corroborated",
+                        "metadataIds":  [
+                                            "meteor-client"
+                                        ],
+                        "classPrefixes":  [
+                                              "meteordevelopment.meteorclient"
+                                          ],
+                        "configurationArtifacts":  [
+
+                                                   ],
+                        "detectionMethods":  [
+                                                 "Exact SHA-256 of six catalogued release JARs",
+                                                 "Exact Fabric mod id metadata",
+                                                 "Exact documented package prefix"
+                                             ],
+                        "evidenceSources":  [
+                                                "https://github.com/MeteorDevelopment/meteor-client/blob/master/src/main/resources/fabric.mod.json",
+                                                "https://github.com/MeteorDevelopment/meteor-client/blob/master/src/main/java/meteordevelopment/meteorclient/MeteorClient.java",
+                                                "https://meteorclient.com/archive"
+                                            ],
+                        "falsePositiveConsiderations":  "Exact metadata id and package are client identity leads, not proof of use. Exact catalog hash verifies a known release artifact.",
+                        "runtimeIndicators":  [
+                                                  "meteordevelopment.meteorclient"
+                                              ],
+                        "metadataNames":  [
+
+                                          ]
+                    },
+                    {
+                        "name":  "LiquidBounce",
+                        "category":  "Mod-based or hacked client",
+                        "knownVersions":  [
+
+                                          ],
+                        "supportedMinecraftVersions":  "Not verified in this catalog",
+                        "distributionFormats":  [
+                                                    "Fabric mod JAR"
+                                                ],
+                        "verifiedSha256Available":  false,
+                        "signatureStatus":  "No verified signature",
+                        "metadataIds":  [
+                                            "liquidbounce"
+                                        ],
+                        "classPrefixes":  [
+                                              "net.ccbluex.liquidbounce"
+                                          ],
+                        "configurationArtifacts":  [
+
+                                                   ],
+                        "detectionMethods":  [
+                                                 "Exact Fabric mod id metadata",
+                                                 "Exact documented package prefix"
+                                             ],
+                        "evidenceSources":  [
+                                                "https://github.com/CCBlueX/LiquidBounce/blob/nextgen/src/main/resources/fabric.mod.json",
+                                                "https://github.com/CCBlueX/LiquidBounce/blob/nextgen/src/main/kotlin/net/ccbluex/liquidbounce/features/module/ModuleManager.kt"
+                                            ],
+                        "falsePositiveConsiderations":  "Exact metadata id and package are client identity leads, not proof of use; no verified release hash is catalogued.",
+                        "runtimeIndicators":  [
+                                                  "net.ccbluex.liquidbounce"
+                                              ],
+                        "metadataNames":  [
+
+                                          ]
+                    },
+                    {
+                        "name":  "Wurst",
+                        "category":  "Mod-based or hacked client",
+                        "knownVersions":  [
+
+                                          ],
+                        "supportedMinecraftVersions":  "Not verified in this catalog",
+                        "distributionFormats":  [
+                                                    "Fabric mod JAR"
+                                                ],
+                        "verifiedSha256Available":  false,
+                        "signatureStatus":  "No verified signature",
+                        "metadataIds":  [
+                                            "wurst"
+                                        ],
+                        "classPrefixes":  [
+                                              "net.wurstclient"
+                                          ],
+                        "configurationArtifacts":  [
+
+                                                   ],
+                        "detectionMethods":  [
+                                                 "Exact Fabric mod id metadata",
+                                                 "Exact documented package prefix"
+                                             ],
+                        "evidenceSources":  [
+                                                "https://github.com/Wurst-Imperium/Wurst7/blob/master/src/main/resources/fabric.mod.json",
+                                                "https://github.com/Wurst-Imperium/Wurst7/blob/master/src/main/java/net/wurstclient/WurstClient.java"
+                                            ],
+                        "falsePositiveConsiderations":  "Exact metadata id and package are client identity leads, not proof of use; no verified release hash is catalogued.",
+                        "runtimeIndicators":  [
+                                                  "net.wurstclient"
+                                              ],
+                        "metadataNames":  [
+
+                                          ]
+                    },
+                    {
+                        "name":  "Aristois",
+                        "category":  "Mod-based or hacked client",
+                        "knownVersions":  [
+
+                                          ],
+                        "supportedMinecraftVersions":  "Not verified in this catalog",
+                        "distributionFormats":  [
+
+                                                ],
+                        "verifiedSha256Available":  false,
+                        "signatureStatus":  "No verified signature",
+                        "metadataIds":  [
+
+                                        ],
+                        "classPrefixes":  [
+
+                                          ],
+                        "configurationArtifacts":  [
+
+                                                   ],
+                        "runtimeIndicators":  [
+
+                                              ],
+                        "detectionMethods":  [
+                                                 "No verified client-specific indicator catalogued"
+                                             ],
+                        "evidenceSources":  [
+
+                                            ],
+                        "falsePositiveConsiderations":  "No verified artifact indicator is currently catalogued. Generic filenames or terms are not proof.",
+                        "metadataNames":  [
+
+                                          ]
+                    },
+                    {
+                        "name":  "Impact",
+                        "category":  "Mod-based or hacked client",
+                        "knownVersions":  [
+
+                                          ],
+                        "supportedMinecraftVersions":  "Not verified in this catalog",
+                        "distributionFormats":  [
+
+                                                ],
+                        "verifiedSha256Available":  false,
+                        "signatureStatus":  "No verified signature",
+                        "metadataIds":  [
+
+                                        ],
+                        "classPrefixes":  [
+
+                                          ],
+                        "configurationArtifacts":  [
+
+                                                   ],
+                        "runtimeIndicators":  [
+
+                                              ],
+                        "detectionMethods":  [
+                                                 "No verified client-specific indicator catalogued"
+                                             ],
+                        "evidenceSources":  [
+
+                                            ],
+                        "falsePositiveConsiderations":  "No verified artifact indicator is currently catalogued. Generic filenames or terms are not proof.",
+                        "metadataNames":  [
+
+                                          ]
+                    },
+                    {
+                        "name":  "Inertia",
+                        "category":  "Mod-based or hacked client",
+                        "knownVersions":  [
+
+                                          ],
+                        "supportedMinecraftVersions":  "Not verified in this catalog",
+                        "distributionFormats":  [
+
+                                                ],
+                        "verifiedSha256Available":  false,
+                        "signatureStatus":  "No verified signature",
+                        "metadataIds":  [
+
+                                        ],
+                        "classPrefixes":  [
+
+                                          ],
+                        "configurationArtifacts":  [
+
+                                                   ],
+                        "runtimeIndicators":  [
+
+                                              ],
+                        "detectionMethods":  [
+                                                 "No verified client-specific indicator catalogued"
+                                             ],
+                        "evidenceSources":  [
+
+                                            ],
+                        "falsePositiveConsiderations":  "No verified artifact indicator is currently catalogued. Generic filenames or terms are not proof.",
+                        "metadataNames":  [
+
+                                          ]
+                    },
+                    {
+                        "name":  "BleachHack",
+                        "category":  "Mod-based or hacked client",
+                        "knownVersions":  [
+
+                                          ],
+                        "supportedMinecraftVersions":  "Not verified in this catalog",
+                        "distributionFormats":  [
+
+                                                ],
+                        "verifiedSha256Available":  false,
+                        "signatureStatus":  "No verified signature",
+                        "metadataIds":  [
+
+                                        ],
+                        "classPrefixes":  [
+
+                                          ],
+                        "configurationArtifacts":  [
+
+                                                   ],
+                        "runtimeIndicators":  [
+
+                                              ],
+                        "detectionMethods":  [
+                                                 "No verified client-specific indicator catalogued"
+                                             ],
+                        "evidenceSources":  [
+
+                                            ],
+                        "falsePositiveConsiderations":  "No verified artifact indicator is currently catalogued. Generic filenames or terms are not proof.",
+                        "metadataNames":  [
+
+                                          ]
+                    },
+                    {
+                        "name":  "ThunderHack",
+                        "category":  "Mod-based or hacked client",
+                        "knownVersions":  [
+
+                                          ],
+                        "supportedMinecraftVersions":  "Not verified in this catalog",
+                        "distributionFormats":  [
+
+                                                ],
+                        "verifiedSha256Available":  false,
+                        "signatureStatus":  "No verified signature",
+                        "metadataIds":  [
+
+                                        ],
+                        "classPrefixes":  [
+
+                                          ],
+                        "configurationArtifacts":  [
+
+                                                   ],
+                        "runtimeIndicators":  [
+
+                                              ],
+                        "detectionMethods":  [
+                                                 "No verified client-specific indicator catalogued"
+                                             ],
+                        "evidenceSources":  [
+
+                                            ],
+                        "falsePositiveConsiderations":  "No verified artifact indicator is currently catalogued. Generic filenames or terms are not proof.",
+                        "metadataNames":  [
+
+                                          ]
+                    },
+                    {
+                        "name":  "RusherHack",
+                        "category":  "Mod-based or hacked client",
+                        "knownVersions":  [
+
+                                          ],
+                        "supportedMinecraftVersions":  "Not verified in this catalog",
+                        "distributionFormats":  [
+
+                                                ],
+                        "verifiedSha256Available":  false,
+                        "signatureStatus":  "No verified signature",
+                        "metadataIds":  [
+
+                                        ],
+                        "classPrefixes":  [
+
+                                          ],
+                        "configurationArtifacts":  [
+
+                                                   ],
+                        "runtimeIndicators":  [
+
+                                              ],
+                        "detectionMethods":  [
+                                                 "No verified client-specific indicator catalogued"
+                                             ],
+                        "evidenceSources":  [
+
+                                            ],
+                        "falsePositiveConsiderations":  "No verified artifact indicator is currently catalogued. Generic filenames or terms are not proof.",
+                        "metadataNames":  [
+
+                                          ]
+                    },
+                    {
+                        "name":  "Future Client",
+                        "category":  "Mod-based or hacked client",
+                        "knownVersions":  [
+
+                                          ],
+                        "supportedMinecraftVersions":  "Not verified in this catalog",
+                        "distributionFormats":  [
+
+                                                ],
+                        "verifiedSha256Available":  false,
+                        "signatureStatus":  "No verified signature",
+                        "metadataIds":  [
+
+                                        ],
+                        "classPrefixes":  [
+
+                                          ],
+                        "configurationArtifacts":  [
+
+                                                   ],
+                        "runtimeIndicators":  [
+
+                                              ],
+                        "detectionMethods":  [
+                                                 "No verified client-specific indicator catalogued"
+                                             ],
+                        "evidenceSources":  [
+
+                                            ],
+                        "falsePositiveConsiderations":  "No verified artifact indicator is currently catalogued. Generic filenames or terms are not proof.",
+                        "metadataNames":  [
+
+                                          ]
+                    },
+                    {
+                        "name":  "Lambda Client",
+                        "category":  "Mod-based or hacked client",
+                        "knownVersions":  [
+
+                                          ],
+                        "supportedMinecraftVersions":  "Not verified in this catalog",
+                        "distributionFormats":  [
+
+                                                ],
+                        "verifiedSha256Available":  false,
+                        "signatureStatus":  "No verified signature",
+                        "metadataIds":  [
+
+                                        ],
+                        "classPrefixes":  [
+
+                                          ],
+                        "configurationArtifacts":  [
+
+                                                   ],
+                        "runtimeIndicators":  [
+
+                                              ],
+                        "detectionMethods":  [
+                                                 "No verified client-specific indicator catalogued"
+                                             ],
+                        "evidenceSources":  [
+
+                                            ],
+                        "falsePositiveConsiderations":  "No verified artifact indicator is currently catalogued. Generic filenames or terms are not proof.",
+                        "metadataNames":  [
+
+                                          ]
+                    },
+                    {
+                        "name":  "Kami Blue",
+                        "category":  "Mod-based or hacked client",
+                        "knownVersions":  [
+
+                                          ],
+                        "supportedMinecraftVersions":  "Not verified in this catalog",
+                        "distributionFormats":  [
+
+                                                ],
+                        "verifiedSha256Available":  false,
+                        "signatureStatus":  "No verified signature",
+                        "metadataIds":  [
+
+                                        ],
+                        "classPrefixes":  [
+
+                                          ],
+                        "configurationArtifacts":  [
+
+                                                   ],
+                        "runtimeIndicators":  [
+
+                                              ],
+                        "detectionMethods":  [
+                                                 "No verified client-specific indicator catalogued"
+                                             ],
+                        "evidenceSources":  [
+
+                                            ],
+                        "falsePositiveConsiderations":  "No verified artifact indicator is currently catalogued. Generic filenames or terms are not proof.",
+                        "metadataNames":  [
+
+                                          ]
+                    },
+                    {
+                        "name":  "Doomsday Client",
+                        "category":  "Ghost or injectable client",
+                        "knownVersions":  [
+
+                                          ],
+                        "supportedMinecraftVersions":  "Not verified in this catalog",
+                        "distributionFormats":  [
+
+                                                ],
+                        "verifiedSha256Available":  false,
+                        "signatureStatus":  "Insufficient client-specific coverage",
+                        "metadataIds":  [
+
+                                        ],
+                        "classPrefixes":  [
+
+                                          ],
+                        "configurationArtifacts":  [
+
+                                                   ],
+                        "runtimeIndicators":  [
+
+                                              ],
+                        "detectionMethods":  [
+                                                 "No verified Doomsday-specific detector is currently available",
+                                                 "Generic loaded-module and JVM-agent inspection may provide supporting evidence only when an independently verified artifact signature is matched"
+                                             ],
+                        "evidenceSources":  [
+                                                "https://doomsdayclient.com/",
+                                                "https://doomsdayclient.com/features"
+                                            ],
+                        "falsePositiveConsiderations":  "No verified Doomsday artifact or runtime signature is catalogued. The official product site describes a cross-version utility/ghost mod and says loader filenames may be randomized; this supports not relying on filenames, but provides no technical detection identifier. Generic DLLs, agents, class names, or filenames are not Doomsday proof.",
+                        "metadataNames":  [
+
+                                          ],
+                        "coverageStatus":  "Insufficient",
+                        "coverageNote":  "No stable client-specific artifact or runtime indicator was verified. Filename, generic injection, and unfamiliar module evidence are not sufficient for a client attribution."
+                    },
+                    {
+                        "name":  "Rise Client",
+                        "category":  "Mod-based or hacked client",
+                        "knownVersions":  [
+
+                                          ],
+                        "supportedMinecraftVersions":  "Not verified in this catalog",
+                        "distributionFormats":  [
+
+                                                ],
+                        "verifiedSha256Available":  false,
+                        "signatureStatus":  "No verified signature",
+                        "metadataIds":  [
+
+                                        ],
+                        "classPrefixes":  [
+
+                                          ],
+                        "configurationArtifacts":  [
+
+                                                   ],
+                        "runtimeIndicators":  [
+
+                                              ],
+                        "detectionMethods":  [
+                                                 "No verified client-specific indicator catalogued"
+                                             ],
+                        "evidenceSources":  [
+
+                                            ],
+                        "falsePositiveConsiderations":  "No verified artifact indicator is currently catalogued. Generic filenames or terms are not proof.",
+                        "metadataNames":  [
+
+                                          ]
+                    },
+                    {
+                        "name":  "FDPClient",
+                        "category":  "Mod-based or hacked client",
+                        "knownVersions":  [
+
+                                          ],
+                        "supportedMinecraftVersions":  "Not verified in this catalog",
+                        "distributionFormats":  [
+
+                                                ],
+                        "verifiedSha256Available":  false,
+                        "signatureStatus":  "No verified signature",
+                        "metadataIds":  [
+
+                                        ],
+                        "classPrefixes":  [
+
+                                          ],
+                        "configurationArtifacts":  [
+
+                                                   ],
+                        "runtimeIndicators":  [
+
+                                              ],
+                        "detectionMethods":  [
+                                                 "No verified client-specific indicator catalogued"
+                                             ],
+                        "evidenceSources":  [
+
+                                            ],
+                        "falsePositiveConsiderations":  "No verified artifact indicator is currently catalogued. Generic filenames or terms are not proof.",
+                        "metadataNames":  [
+
+                                          ]
+                    },
+                    {
+                        "name":  "Augustus",
+                        "category":  "Mod-based or hacked client",
+                        "knownVersions":  [
+
+                                          ],
+                        "supportedMinecraftVersions":  "Not verified in this catalog",
+                        "distributionFormats":  [
+
+                                                ],
+                        "verifiedSha256Available":  false,
+                        "signatureStatus":  "No verified signature",
+                        "metadataIds":  [
+
+                                        ],
+                        "classPrefixes":  [
+
+                                          ],
+                        "configurationArtifacts":  [
+
+                                                   ],
+                        "runtimeIndicators":  [
+
+                                              ],
+                        "detectionMethods":  [
+                                                 "No verified client-specific indicator catalogued"
+                                             ],
+                        "evidenceSources":  [
+
+                                            ],
+                        "falsePositiveConsiderations":  "No verified artifact indicator is currently catalogued. Generic filenames or terms are not proof.",
+                        "metadataNames":  [
+
+                                          ]
+                    },
+                    {
+                        "name":  "Tenacity",
+                        "category":  "Mod-based or hacked client",
+                        "knownVersions":  [
+
+                                          ],
+                        "supportedMinecraftVersions":  "Not verified in this catalog",
+                        "distributionFormats":  [
+
+                                                ],
+                        "verifiedSha256Available":  false,
+                        "signatureStatus":  "No verified signature",
+                        "metadataIds":  [
+
+                                        ],
+                        "classPrefixes":  [
+
+                                          ],
+                        "configurationArtifacts":  [
+
+                                                   ],
+                        "runtimeIndicators":  [
+
+                                              ],
+                        "detectionMethods":  [
+                                                 "No verified client-specific indicator catalogued"
+                                             ],
+                        "evidenceSources":  [
+
+                                            ],
+                        "falsePositiveConsiderations":  "No verified artifact indicator is currently catalogued. Generic filenames or terms are not proof.",
+                        "metadataNames":  [
+
+                                          ]
+                    },
+                    {
+                        "name":  "Flux",
+                        "category":  "Mod-based or hacked client",
+                        "knownVersions":  [
+
+                                          ],
+                        "supportedMinecraftVersions":  "Not verified in this catalog",
+                        "distributionFormats":  [
+
+                                                ],
+                        "verifiedSha256Available":  false,
+                        "signatureStatus":  "No verified signature",
+                        "metadataIds":  [
+
+                                        ],
+                        "classPrefixes":  [
+
+                                          ],
+                        "configurationArtifacts":  [
+
+                                                   ],
+                        "runtimeIndicators":  [
+
+                                              ],
+                        "detectionMethods":  [
+                                                 "No verified client-specific indicator catalogued"
+                                             ],
+                        "evidenceSources":  [
+
+                                            ],
+                        "falsePositiveConsiderations":  "No verified artifact indicator is currently catalogued. Generic filenames or terms are not proof.",
+                        "metadataNames":  [
+
+                                          ]
+                    },
+                    {
+                        "name":  "Sigma",
+                        "category":  "Mod-based or hacked client",
+                        "knownVersions":  [
+
+                                          ],
+                        "supportedMinecraftVersions":  "Not verified in this catalog",
+                        "distributionFormats":  [
+
+                                                ],
+                        "verifiedSha256Available":  false,
+                        "signatureStatus":  "No verified signature",
+                        "metadataIds":  [
+
+                                        ],
+                        "classPrefixes":  [
+
+                                          ],
+                        "configurationArtifacts":  [
+
+                                                   ],
+                        "runtimeIndicators":  [
+
+                                              ],
+                        "detectionMethods":  [
+                                                 "No verified client-specific indicator catalogued"
+                                             ],
+                        "evidenceSources":  [
+
+                                            ],
+                        "falsePositiveConsiderations":  "No verified artifact indicator is currently catalogued. Generic filenames or terms are not proof.",
+                        "metadataNames":  [
+
+                                          ]
+                    },
+                    {
+                        "name":  "Vape",
+                        "category":  "Ghost or injectable client",
+                        "knownVersions":  [
+
+                                          ],
+                        "supportedMinecraftVersions":  "Not verified in this catalog",
+                        "distributionFormats":  [
+
+                                                ],
+                        "verifiedSha256Available":  false,
+                        "signatureStatus":  "No verified signature",
+                        "metadataIds":  [
+
+                                        ],
+                        "classPrefixes":  [
+
+                                          ],
+                        "configurationArtifacts":  [
+
+                                                   ],
+                        "runtimeIndicators":  [
+
+                                              ],
+                        "detectionMethods":  [
+                                                 "No verified client-specific indicator catalogued"
+                                             ],
+                        "evidenceSources":  [
+
+                                            ],
+                        "falsePositiveConsiderations":  "No verified artifact indicator is currently catalogued. Generic filenames or terms are not proof.",
+                        "metadataNames":  [
+
+                                          ]
+                    },
+                    {
+                        "name":  "Vape Lite",
+                        "category":  "Ghost or injectable client",
+                        "knownVersions":  [
+
+                                          ],
+                        "supportedMinecraftVersions":  "Not verified in this catalog",
+                        "distributionFormats":  [
+
+                                                ],
+                        "verifiedSha256Available":  false,
+                        "signatureStatus":  "No verified signature",
+                        "metadataIds":  [
+
+                                        ],
+                        "classPrefixes":  [
+
+                                          ],
+                        "configurationArtifacts":  [
+
+                                                   ],
+                        "runtimeIndicators":  [
+
+                                              ],
+                        "detectionMethods":  [
+                                                 "No verified client-specific indicator catalogued"
+                                             ],
+                        "evidenceSources":  [
+
+                                            ],
+                        "falsePositiveConsiderations":  "No verified artifact indicator is currently catalogued. Generic filenames or terms are not proof.",
+                        "metadataNames":  [
+
+                                          ]
+                    },
+                    {
+                        "name":  "Raven",
+                        "category":  "Ghost or injectable client",
+                        "knownVersions":  [
+
+                                          ],
+                        "supportedMinecraftVersions":  "Not verified in this catalog",
+                        "distributionFormats":  [
+
+                                                ],
+                        "verifiedSha256Available":  false,
+                        "signatureStatus":  "No verified signature",
+                        "metadataIds":  [
+
+                                        ],
+                        "classPrefixes":  [
+
+                                          ],
+                        "configurationArtifacts":  [
+
+                                                   ],
+                        "runtimeIndicators":  [
+
+                                              ],
+                        "detectionMethods":  [
+                                                 "No verified client-specific indicator catalogued"
+                                             ],
+                        "evidenceSources":  [
+
+                                            ],
+                        "falsePositiveConsiderations":  "No verified artifact indicator is currently catalogued. Generic filenames or terms are not proof.",
+                        "metadataNames":  [
+
+                                          ]
+                    },
+                    {
+                        "name":  "Drip",
+                        "category":  "Ghost or injectable client",
+                        "knownVersions":  [
+
+                                          ],
+                        "supportedMinecraftVersions":  "Not verified in this catalog",
+                        "distributionFormats":  [
+
+                                                ],
+                        "verifiedSha256Available":  false,
+                        "signatureStatus":  "No verified signature",
+                        "metadataIds":  [
+
+                                        ],
+                        "classPrefixes":  [
+
+                                          ],
+                        "configurationArtifacts":  [
+
+                                                   ],
+                        "runtimeIndicators":  [
+
+                                              ],
+                        "detectionMethods":  [
+                                                 "No verified client-specific indicator catalogued"
+                                             ],
+                        "evidenceSources":  [
+
+                                            ],
+                        "falsePositiveConsiderations":  "No verified artifact indicator is currently catalogued. Generic filenames or terms are not proof.",
+                        "metadataNames":  [
+
+                                          ]
+                    },
+                    {
+                        "name":  "Entropy",
+                        "category":  "Ghost or injectable client",
+                        "knownVersions":  [
+
+                                          ],
+                        "supportedMinecraftVersions":  "Not verified in this catalog",
+                        "distributionFormats":  [
+
+                                                ],
+                        "verifiedSha256Available":  false,
+                        "signatureStatus":  "No verified signature",
+                        "metadataIds":  [
+
+                                        ],
+                        "classPrefixes":  [
+
+                                          ],
+                        "configurationArtifacts":  [
+
+                                                   ],
+                        "runtimeIndicators":  [
+
+                                              ],
+                        "detectionMethods":  [
+                                                 "No verified client-specific indicator catalogued"
+                                             ],
+                        "evidenceSources":  [
+
+                                            ],
+                        "falsePositiveConsiderations":  "No verified artifact indicator is currently catalogued. Generic filenames or terms are not proof.",
+                        "metadataNames":  [
+
+                                          ]
+                    },
+                    {
+                        "name":  "Whiteout",
+                        "category":  "Ghost or injectable client",
+                        "knownVersions":  [
+
+                                          ],
+                        "supportedMinecraftVersions":  "Not verified in this catalog",
+                        "distributionFormats":  [
+
+                                                ],
+                        "verifiedSha256Available":  false,
+                        "signatureStatus":  "No verified signature",
+                        "metadataIds":  [
+
+                                        ],
+                        "classPrefixes":  [
+
+                                          ],
+                        "configurationArtifacts":  [
+
+                                                   ],
+                        "runtimeIndicators":  [
+
+                                              ],
+                        "detectionMethods":  [
+                                                 "No verified client-specific indicator catalogued"
+                                             ],
+                        "evidenceSources":  [
+
+                                            ],
+                        "falsePositiveConsiderations":  "No verified artifact indicator is currently catalogued. Generic filenames or terms are not proof.",
+                        "metadataNames":  [
+
+                                          ]
+                    },
+                    {
+                        "name":  "Dream",
+                        "category":  "Ghost or injectable client",
+                        "knownVersions":  [
+
+                                          ],
+                        "supportedMinecraftVersions":  "Not verified in this catalog",
+                        "distributionFormats":  [
+
+                                                ],
+                        "verifiedSha256Available":  false,
+                        "signatureStatus":  "No verified signature",
+                        "metadataIds":  [
+
+                                        ],
+                        "classPrefixes":  [
+
+                                          ],
+                        "configurationArtifacts":  [
+
+                                                   ],
+                        "runtimeIndicators":  [
+
+                                              ],
+                        "detectionMethods":  [
+                                                 "No verified client-specific indicator catalogued"
+                                             ],
+                        "evidenceSources":  [
+
+                                            ],
+                        "falsePositiveConsiderations":  "No verified artifact indicator is currently catalogued. Generic filenames or terms are not proof.",
+                        "metadataNames":  [
+
+                                          ]
+                    },
+                    {
+                        "name":  "Slinky",
+                        "category":  "Ghost or injectable client",
+                        "knownVersions":  [
+
+                                          ],
+                        "supportedMinecraftVersions":  "Not verified in this catalog",
+                        "distributionFormats":  [
+
+                                                ],
+                        "verifiedSha256Available":  false,
+                        "signatureStatus":  "No verified signature",
+                        "metadataIds":  [
+
+                                        ],
+                        "classPrefixes":  [
+
+                                          ],
+                        "configurationArtifacts":  [
+
+                                                   ],
+                        "runtimeIndicators":  [
+
+                                              ],
+                        "detectionMethods":  [
+                                                 "No verified client-specific indicator catalogued"
+                                             ],
+                        "evidenceSources":  [
+
+                                            ],
+                        "falsePositiveConsiderations":  "No verified artifact indicator is currently catalogued. Generic filenames or terms are not proof.",
+                        "metadataNames":  [
+
+                                          ]
+                    }
+                ],
+    "entries":  [
+                    {
+                        "sha256":  "402b1609c2f52c71faa0188e54a11358f74e8d9a6f14769cf4dfe35abd154944",
+                        "label":  "Meteor Client 1.21.10 build 57",
+                        "project":  "Meteor Client",
+                        "artifactVersion":  "1.21.10-57",
+                        "status":  "OfficialSourceHashed",
+                        "source":  "https://meteorclient.com/api/download?version=1.21.10",
+                        "evidence":  "Fetched by HTTPS from the official versioned endpoint on 2026-10-16; response filename meteor-client-1.21.10-57.jar, length 5226893 bytes. SHA-256 computed locally from response stream in memory. No independent digest corroboration located.",
+                        "artifactType":  "JAR",
+                        "runtimeClassPackages":  [
+
+                                                 ]
+                    },
+                    {
+                        "sha256":  "7359e847a8af925ed2ef3559e66b879069770ece7feb3847519c23949ee2d8cc",
+                        "label":  "Meteor Client 1.21.8 build 69",
+                        "project":  "Meteor Client",
+                        "artifactVersion":  "1.21.8-69",
+                        "status":  "OfficialSourceHashed",
+                        "source":  "https://meteorclient.com/api/download?version=1.21.8",
+                        "evidence":  "Fetched by HTTPS from the official versioned endpoint on 2026-10-16; response filename meteor-client-1.21.8-69.jar, length 4720991 bytes. SHA-256 computed locally from response stream in memory. No independent digest corroboration located.",
+                        "artifactType":  "JAR",
+                        "runtimeClassPackages":  [
+
+                                                 ]
+                    },
+                    {
+                        "sha256":  "a0993fdd76dc2ac421f5143267ca8f2393584ee4b1e5b779018a8201b427c655",
+                        "label":  "Meteor Client 1.21.7 build 4",
+                        "project":  "Meteor Client",
+                        "artifactVersion":  "1.21.7-4",
+                        "status":  "OfficialSourceHashed",
+                        "source":  "https://meteorclient.com/api/download?version=1.21.7",
+                        "evidence":  "Fetched by HTTPS from the official versioned endpoint on 2026-10-16; response filename meteor-client-1.21.7-4.jar, length 4648435 bytes. SHA-256 computed locally from response stream in memory. No independent digest corroboration located.",
+                        "artifactType":  "JAR",
+                        "runtimeClassPackages":  [
+
+                                                 ]
+                    },
+                    {
+                        "sha256":  "0996f410abaaea5b78d8e03d79c2e18c940d47922d1269ccc8aa4a643c959328",
+                        "label":  "Meteor Client 1.21.6 build 7",
+                        "project":  "Meteor Client",
+                        "artifactVersion":  "1.21.6-7",
+                        "status":  "OfficialSourceHashed",
+                        "source":  "https://meteorclient.com/api/download?version=1.21.6",
+                        "evidence":  "Fetched by HTTPS from the official versioned endpoint on 2026-10-16; response filename meteor-client-1.21.6-7.jar, length 4648898 bytes. SHA-256 computed locally from response stream in memory. No independent digest corroboration located.",
+                        "artifactType":  "JAR",
+                        "runtimeClassPackages":  [
+
+                                                 ]
+                    },
+                    {
+                        "sha256":  "309d3d61b7d3f9651c42c2f7dbaa41dabb3765fe1705bde263912bc712ebc44d",
+                        "label":  "Meteor Client 1.21.5 build 54",
+                        "project":  "Meteor Client",
+                        "artifactVersion":  "1.21.5-54",
+                        "status":  "OfficialSourceHashed",
+                        "source":  "https://meteorclient.com/api/download?version=1.21.5",
+                        "evidence":  "Fetched by HTTPS from the official versioned endpoint on 2026-10-16; response filename meteor-client-1.21.5-54.jar, length 4622925 bytes. SHA-256 computed locally from response stream in memory. No independent digest corroboration located.",
+                        "artifactType":  "JAR",
+                        "runtimeClassPackages":  [
+
+                                                 ]
+                    },
+                    {
+                        "sha256":  "93390cfdb1030e47f116357ba421c90a9b1ca4832b6551c2dec1ade5eeb42e71",
+                        "label":  "Meteor Client 1.21.11 build 86",
+                        "project":  "Meteor Client",
+                        "artifactVersion":  "1.21.11-86",
+                        "status":  "IndependentlyVerified",
+                        "source":  "https://meteorclient.com/api/download?version=1.21.11",
+                        "evidence":  "Downloaded over HTTPS from the official Meteor endpoint on 2026-10-16. Response was application/java-archive, filename meteor-client-1.21.11-86.jar, length 5342786 bytes. SHA-256 was computed locally from the response stream and independently matched the Triage static analysis record for this exact filename.",
+                        "corroboration":  "https://tria.ge/260907-qgg7gaan4t/static1",
+                        "artifactType":  "JAR",
+                        "runtimeClassPackages":  [
+
+                                                 ]
+                    }
+                ]
+}

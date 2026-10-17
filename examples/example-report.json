@@ -1,0 +1,47 @@
+{
+  "ScannerVersion": "6.0.1",
+  "Timestamp": "2026-01-01T12:00:00.0000000+00:00",
+  "DurationSeconds": 1.42,
+  "Summary": "No confirmed cheat signature found; this scan cannot prove the system is clean.",
+  "Processes": [
+    {
+      "ProcessId": 4242,
+      "Name": "javaw.exe",
+      "ExecutablePath": "C:\\Program Files\\Java\\bin\\javaw.exe",
+      "CommandLine": "javaw.exe -Djava.class.path=... --gameDir C:\\Games\\ExampleInstance",
+      "GameDir": "C:\\Games\\ExampleInstance",
+      "Version": "1.21.1"
+    }
+  ],
+  "Java": null,
+  "Profiles": [
+    { "Launcher": "Prism", "Name": "Example Fabric", "GameDir": "C:\\Games\\ExampleInstance", "Active": true, "ProcessId": 4242 }
+  ],
+  "LauncherAndLoader": "Fabric (example metadata; launcher best effort)",
+  "Coverage": [
+    { "Check": "Minecraft process detection", "Status": "Completed", "Detail": "Found 1 Minecraft process" },
+    { "Check": "VM.classloader_stats PID 4242", "Status": "Failed", "Detail": "Attach not supported by this JVM" },
+    { "Check": "Mod archive scan", "Status": "Completed", "Detail": "JAR count=12, file limit=5000" }
+  ],
+  "Findings": [
+    {
+      "Category": "Scan Incomplete",
+      "Title": "VM.classloader_stats unavailable for PID 4242",
+      "Detail": "Attach not supported by this JVM",
+      "Path": null,
+      "ProcessId": 4242
+    },
+    {
+      "Category": "Informational",
+      "Title": "No active threat signature matched",
+      "Detail": "This is not proof that the system is clean.",
+      "Path": null,
+      "ProcessId": null
+    }
+  ],
+  "Limitations": [
+    "Renamed, encrypted, injected, or memory-only cheats may not be detected.",
+    "Installed mods do not prove which mods were loaded in the active game.",
+    "The scan is read-only and does not extract JAR contents."
+  ]
+}

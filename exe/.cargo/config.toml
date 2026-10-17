@@ -1,0 +1,14 @@
+﻿[registries.crates-io]
+protocol = "sparse"
+
+[http]
+timeout = 30
+low-speed-limit = 10
+
+[net]
+retry = 2
+
+# Link the MSVC CRT statically so the distributable GUI does not depend on a
+# separately installed Visual C++ runtime on the target PC.
+[target.x86_64-pc-windows-msvc]
+rustflags = ["-C", "target-feature=+crt-static"]
