@@ -9,5 +9,5 @@ pub mod runtime_correlation;
 pub mod scan;
 pub mod signatures;
 
-pub use model::{Coverage, Finding, ProcessRecord, ScanReport};
+pub use model::{Coverage, CoverageStatus, Finding, ProcessRecord, ScanReport};
 pub use scan::{run_scan, ScanEvent};
