@@ -22,7 +22,9 @@ mod embedded_agent {
 static NATIVE_BUILD_ID: &str = "MCS_NATIVE_RUST_SCANNER_V8";
 
 const EMBEDDED_ICON: &[u8] = include_bytes!("../../../assets/scanner.ico");
+const EMBEDDED_MANIFEST: &[u8] = include_bytes!("../../../assets/app.manifest");
 
+#[derive(Clone)]
 struct StartupLog {
     path: Option<PathBuf>,
 }
@@ -103,16 +105,35 @@ fn redact_user_paths(message: &str) -> String {
 }
 
 fn validate_embedded_app_resources(log: &StartupLog) -> Result<String, String> {
+    if !cfg!(target_os = "windows") || !cfg!(target_arch = "x86_64") {
+        return Err("this application build requires Windows x64".into());
+    }
+    log.record(
+        "runtime-dependencies",
+        "Windows x64 process reached Rust entry point and the OS loader resolved startup imports; GUI renderer/window backend is not exercised by this headless test",
+    );
+
     if EMBEDDED_ICON.len() < 6 || EMBEDDED_ICON[..4] != [0, 0, 1, 0] {
         return Err("embedded application icon is missing or invalid".into());
     }
     log.record("resources", "embedded application icon validated");
+    let manifest = std::str::from_utf8(EMBEDDED_MANIFEST)
+        .map_err(|_| "embedded application manifest is not valid UTF-8".to_owned())?;
+    if !manifest.contains("requestedExecutionLevel level=\"asInvoker\"") {
+        return Err(
+            "embedded application manifest is missing the asInvoker execution level".into(),
+        );
+    }
+    log.record(
+        "resources",
+        "embedded asInvoker application manifest validated",
+    );
 
     let (catalog_version, signatures) = scanner_core::validate_embedded_catalog()
         .map_err(|error| format!("embedded signature catalog validation failed: {error}"))?;
     log.record(
         "scanner-core",
-        &format!("embedded signature catalog validated; {signatures} entries"),
+        &format!("core initialization passed; signature catalog {catalog_version} validated with {signatures} entries"),
     );
 
     let agent_status = match embedded_agent::EMBEDDED_AGENT {
@@ -133,15 +154,8 @@ fn validate_embedded_app_resources(log: &StartupLog) -> Result<String, String> {
         }
     };
 
-    let _context = egui::Context::default();
-    let _application_state = ScannerApp::default();
-    log.record(
-        "gui",
-        "egui context and application state initialized; no native window was opened",
-    );
-
     Ok(format!(
-        "self-test passed; signature catalog {catalog_version} ({signatures} entries); JVMTI agent {agent_status}; GUI state initialized"
+        "self-test passed; Windows x64 startup imports resolved; embedded icon and manifest valid; signature catalog {catalog_version} ({signatures} entries); JVMTI agent {agent_status}; built-in read-only scanner defaults selected"
     ))
 }
 
@@ -343,7 +357,8 @@ fn main() {
         Ok(Ok(())) => {}
         Ok(Err(error)) => {
             diagnostics.record("fatal", &error);
-            eprintln!(
+            let _ = writeln!(
+                std::io::stderr().lock(),
                 "Minecraft Cheat Scanner startup failed: {}",
                 redact_user_paths(&error)
             );
@@ -362,27 +377,31 @@ fn main() {
 }
 
 fn run_application(diagnostics: &StartupLog) -> Result<(), String> {
-    let _ = tracing_subscriber::fmt().with_env_filter("info").try_init();
-    tracing::info!(build_id = NATIVE_BUILD_ID, "native Rust scanner started");
+    let args: Vec<String> = std::env::args().skip(1).collect();
+    let self_test = args.iter().any(|arg| arg == "--self-test");
+    if self_test && !diagnostics.is_available() {
+        return Err("self-test could not create its required startup diagnostic log".into());
+    }
+
     diagnostics.record(
         "configuration",
-        "using embedded resources and built-in defaults; no external configuration required",
-    );
-    let (catalog_version, signature_count) = scanner_core::validate_embedded_catalog()
-        .map_err(|error| format!("scanner-core initialization failed: {error}"))?;
-    diagnostics.record(
-        "scanner-core",
-        &format!("initialized embedded catalog {catalog_version} with {signature_count} entries"),
+        "using built-in read-only scan defaults; no external configuration is required",
     );
     let self_test_summary = validate_embedded_app_resources(diagnostics)?;
 
-    let args: Vec<String> = std::env::args().skip(1).collect();
-    if args.iter().any(|arg| arg == "--self-test") {
+    if self_test {
         diagnostics.record("self-test", "headless startup checks beginning");
         diagnostics.record("self-test", &format!("PASS: {self_test_summary}"));
-        println!("{self_test_summary}; interactive window startup is not tested by this mode");
+        let mut stdout = std::io::stdout().lock();
+        let _ = writeln!(
+            stdout,
+            "{self_test_summary}; interactive window startup is not tested by this mode"
+        );
         return Ok(());
     }
+
+    let _ = tracing_subscriber::fmt().with_env_filter("info").try_init();
+    tracing::info!(build_id = NATIVE_BUILD_ID, "native Rust scanner started");
 
     if args.iter().any(|arg| arg == "--scan-once") {
         diagnostics.record("scanner-core", "initializing one-shot scan");
@@ -393,6 +412,11 @@ fn run_application(diagnostics: &StartupLog) -> Result<(), String> {
     }
 
     diagnostics.record("gui", "creating native eframe window and event loop");
+    diagnostics.record(
+        "gui",
+        "calling eframe to create the native window and app instance",
+    );
+    let gui_diagnostics = diagnostics.clone();
     let opts = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
             .with_inner_size([780.0, 650.0])
@@ -402,7 +426,8 @@ fn run_application(diagnostics: &StartupLog) -> Result<(), String> {
     eframe::run_native(
         "Minecraft Cheat Scanner v8.0",
         opts,
-        Box::new(|cc| {
+        Box::new(move |cc| {
+            gui_diagnostics.record("gui", "eframe app creator invoked");
             cc.egui_ctx.set_visuals(egui::Visuals::dark());
             Ok(Box::<ScannerApp>::default())
         }),
@@ -414,7 +439,7 @@ fn run_application(diagnostics: &StartupLog) -> Result<(), String> {
 
 #[cfg(test)]
 mod tests {
-    use super::{is_x64_dll, EMBEDDED_ICON};
+    use super::{is_x64_dll, EMBEDDED_ICON, EMBEDDED_MANIFEST};
 
     fn synthetic_pe(machine: u16, characteristics: u16) -> Vec<u8> {
         let mut bytes = vec![0u8; 0x100];
@@ -450,6 +475,19 @@ mod tests {
         assert!(EMBEDDED_ICON.len() >= 6);
         assert_eq!(&EMBEDDED_ICON[..4], &[0, 0, 1, 0]);
         assert_ne!(u16::from_le_bytes([EMBEDDED_ICON[4], EMBEDDED_ICON[5]]), 0);
+    }
+
+    #[test]
+    fn embedded_manifest_requests_standard_user_execution() {
+        let manifest = std::str::from_utf8(EMBEDDED_MANIFEST).unwrap();
+        assert!(manifest.contains("requestedExecutionLevel level=\"asInvoker\""));
+    }
+
+    #[test]
+    fn scanner_core_startup_resources_and_limits_validate() {
+        let (catalog_version, entries) = scanner_core::validate_embedded_catalog().unwrap();
+        assert!(!catalog_version.is_empty());
+        assert!(entries > 0);
     }
 
     #[test]

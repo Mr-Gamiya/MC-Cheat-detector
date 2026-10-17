@@ -16,6 +16,8 @@ The script builds the optional x64 startup agent before Cargo so the Rust build 
 
 The workflow at `..\.github\workflows\build-windows.yml` performs dependency resolution and the Windows x64 checks on a hosted runner. It publishes the resolved lockfile for review and commit, then validates the native build marker and runs a copied EXE from an isolated folder to check report generation before uploading the EXE artifact. Hosted CI is the current route around the local crates.io connection failure. This workflow has not yet been run.
 
+The executable writes startup diagnostics to `%LOCALAPPDATA%\MinecraftCheatScanner\Logs\startup.log`, falling back to a temporary user-writable folder. Set `MCS_DIAGNOSTICS_DIR` to choose a diagnostic folder (used by CI). Startup errors and panics are recorded without logging the current username or known profile paths. The `--self-test` mode validates the Windows x64 platform, loaded startup imports, embedded icon and manifest, signature catalog, built-in scan limits/defaults, and optional agent image before any egui initialization. It does not exercise the GUI renderer or create a native window; passing it does not establish that interactive desktop window creation works.
+
 ## Current source coverage
 
 - `crates\scanner-core`: known-root Minecraft/profile discovery, bounded JAR/ZIP metadata and nested archive analysis, SHA-256, exact verified digest matching, passive Windows process/module inspection, startup-agent correlation, evidence models, and TXT/HTML/JSON/diagnostic reports.

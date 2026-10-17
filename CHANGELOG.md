@@ -1,3 +1,10 @@
+## 8.0 GUI startup diagnostics - 2026-10-17
+
+- Added a local startup log with user-path redaction and top-level error/panic reporting for native GUI initialization failures.
+- Added `--self-test` to validate platform/import readiness, built-in scan limits, embedded icon/manifest/catalog/optional-agent resources, and defaults before any egui initialization.
+- Updated Windows CI to run the honest headless self-test and retain its diagnostic log as an artifact. The test does not claim interactive GUI startup validation.
+- Validation in this change: pending Cargo dependency access; see final task report for actual results.
+
 ## 8.0 repository and hosted-build preparation - 2026-10-17
 
 - Initialized the local `main` branch and configured `origin` as `https://github.com/Mr-Gamiya/MC-Cheat-detector.git`; no files were staged or pushed.

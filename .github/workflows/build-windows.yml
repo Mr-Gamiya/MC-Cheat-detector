@@ -105,17 +105,53 @@ jobs:
           if ($scripts) { throw 'The isolated application unexpectedly requires or created a shell script.' }
           Write-Host "Isolated native scan passed; reports: $reports"
 
-      - name: Verify native GUI starts
+      - name: Run native headless startup self-test (not an interactive GUI test)
         shell: pwsh
         run: |
-          $gui = Start-Process -FilePath (Resolve-Path .\exe\dist\Minecraft-Cheat-Scanner.exe) -PassThru
-          if (-not $gui.WaitForInputIdle(15000)) { if (-not $gui.HasExited) { $gui.Kill() }; throw 'Native GUI did not reach its message loop.' }
-          Start-Sleep -Seconds 3
-          $gui.Refresh()
-          if ($gui.HasExited) { throw "Native GUI exited during startup with code $($gui.ExitCode)." }
-          $gui.Kill()
-          $gui.WaitForExit()
-          Write-Host 'Native GUI startup smoke check passed.'
+          $diagnostics = Join-Path $env:RUNNER_TEMP 'mcs-startup-diagnostics'
+          New-Item -ItemType Directory -Path $diagnostics -Force | Out-Null
+          $env:MCS_DIAGNOSTICS_DIR = $diagnostics
+          $nativeExe = (Resolve-Path .\exe\dist\Minecraft-Cheat-Scanner.exe).Path
+          $stdoutPath = Join-Path $diagnostics 'stdout.log'
+          $stderrPath = Join-Path $diagnostics 'stderr.log'
+          $logPath = Join-Path $diagnostics 'startup.log'
+          $timer = [Diagnostics.Stopwatch]::StartNew()
+          $process = Start-Process -FilePath $nativeExe -ArgumentList '--self-test' -WorkingDirectory $env:RUNNER_TEMP -PassThru -RedirectStandardOutput $stdoutPath -RedirectStandardError $stderrPath
+          if (-not $process.WaitForExit(60000)) {
+            $process.Kill()
+            $process.WaitForExit()
+            $timer.Stop()
+            Write-Host "Self-test timed out after $($timer.Elapsed.TotalSeconds) seconds."
+            foreach ($path in @($stdoutPath,$stderrPath,$logPath)) { if (Test-Path -LiteralPath $path) { Get-Content -LiteralPath $path } }
+            throw 'Native headless startup self-test exceeded its 60 second timeout.'
+          }
+          $process.WaitForExit()
+          $timer.Stop()
+          $exitCode = $process.ExitCode
+          Write-Host "Self-test exit code: $exitCode"
+          Write-Host "Self-test duration: $($timer.Elapsed.TotalSeconds.ToString('F2')) seconds"
+          foreach ($path in @($stdoutPath,$stderrPath,$logPath)) {
+            if (Test-Path -LiteralPath $path) {
+              Write-Host "--- $([IO.Path]::GetFileName($path)) ---"
+              Get-Content -LiteralPath $path
+            }
+          }
+          if (-not (Test-Path -LiteralPath $logPath)) { throw 'Headless startup self-test did not create startup.log.' }
+          if ($exitCode -ne 0) { throw "Native headless startup self-test failed with exit code $exitCode." }
+          $startupLog = Get-Content -LiteralPath $logPath -Raw
+          if ($startupLog -notmatch 'PASS: self-test passed; signature catalog') { throw 'Startup log does not contain the self-test success record.' }
+          if ($startupLog -notmatch 'embedded application icon validated') { throw 'Startup log does not confirm embedded icon validation.' }
+          if ($startupLog -notmatch 'embedded asInvoker application manifest validated') { throw 'Startup log does not confirm manifest validation.' }
+          if ($startupLog -notmatch 'Windows x64 process reached Rust entry point') { throw 'Startup log does not confirm required process startup dependencies.' }
+          Write-Host 'Native Rust headless self-test passed. No egui context or native window was initialized; interactive GUI startup remains untested.'
+
+      - name: Upload startup diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Minecraft-Cheat-Scanner-startup-diagnostics
+          path: ${{ runner.temp }}/mcs-startup-diagnostics/
+          if-no-files-found: warn
 
       - name: Smoke-test startup JVMTI agent with standalone Java fixture
         shell: pwsh

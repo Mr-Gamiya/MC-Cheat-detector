@@ -18,6 +18,18 @@ const MAX_EXPANDED_BYTES: u64 = 128 * 1024 * 1024;
 const MAX_METADATA_BYTES: u64 = 1024 * 1024;
 const MAX_NESTED_BYTES: u64 = 16 * 1024 * 1024;
 
+pub fn validate_default_limits() -> Result<(), ArchiveError> {
+    if MAX_ARCHIVE_BYTES == 0
+        || MAX_ENTRY_COUNT == 0
+        || MAX_EXPANDED_BYTES == 0
+        || MAX_METADATA_BYTES > MAX_EXPANDED_BYTES
+        || MAX_NESTED_BYTES > MAX_ARCHIVE_BYTES
+    {
+        return Err(ArchiveError::Limit);
+    }
+    Ok(())
+}
+
 #[derive(Debug, Error)]
 pub enum ArchiveError {
     #[error("file cannot be read: {0}")]
@@ -210,6 +222,7 @@ mod tests {
     fn zip_bomb_guard_constants_are_bounded() {
         assert!(MAX_EXPANDED_BYTES < 1024 * 1024 * 1024);
         assert!(MAX_ENTRY_COUNT < 100_000);
+        assert!(validate_default_limits().is_ok());
     }
     #[test]
     fn path_traversal_is_never_extracted() {
