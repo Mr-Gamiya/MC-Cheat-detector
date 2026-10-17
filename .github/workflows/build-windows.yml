@@ -115,8 +115,20 @@ jobs:
           $stdoutPath = Join-Path $diagnostics 'stdout.log'
           $stderrPath = Join-Path $diagnostics 'stderr.log'
           $logPath = Join-Path $diagnostics 'startup.log'
+          $reportPath = Join-Path $diagnostics 'self-test-report.json'
+          foreach ($oldPath in @($stdoutPath,$stderrPath,$logPath,$reportPath)) {
+            if (Test-Path -LiteralPath $oldPath) { Remove-Item -LiteralPath $oldPath -Force }
+          }
+          $reportPath = [IO.Path]::GetFullPath($reportPath)
+          $runStartedUtc = [DateTime]::UtcNow
           $timer = [Diagnostics.Stopwatch]::StartNew()
-          $process = Start-Process -FilePath $nativeExe -ArgumentList '--self-test' -WorkingDirectory $env:RUNNER_TEMP -PassThru -RedirectStandardOutput $stdoutPath -RedirectStandardError $stderrPath
+          $arguments = '--self-test --self-test-report "{0}"' -f $reportPath
+          try {
+            $process = Start-Process -FilePath $nativeExe -ArgumentList $arguments -WorkingDirectory $env:RUNNER_TEMP -PassThru -RedirectStandardOutput $stdoutPath -RedirectStandardError $stderrPath -ErrorAction Stop
+          } catch {
+            Write-Host "Could not start native self-test: $($_.Exception.Message)"
+            throw
+          }
           if (-not $process.WaitForExit(60000)) {
             $process.Kill()
             $process.WaitForExit()
@@ -136,14 +148,30 @@ jobs:
               Get-Content -LiteralPath $path
             }
           }
-          if (-not (Test-Path -LiteralPath $logPath)) { throw 'Headless startup self-test did not create startup.log.' }
+          if (-not (Test-Path -LiteralPath $reportPath -PathType Leaf)) {
+            throw "Self-test JSON report was not created during this run: $reportPath"
+          }
+          $reportItem = Get-Item -LiteralPath $reportPath
+          if ($reportItem.LastWriteTimeUtc -lt $runStartedUtc.AddSeconds(-2)) {
+            throw "Self-test report is stale; last modified $($reportItem.LastWriteTimeUtc.ToString('o'))."
+          }
+          try {
+            $selfTestReport = Get-Content -LiteralPath $reportPath -Raw | ConvertFrom-Json -ErrorAction Stop
+          } catch {
+            throw "Self-test JSON report is invalid: $($_.Exception.Message)"
+          }
+          Write-Host "--- self-test-report.json ---"
+          Get-Content -LiteralPath $reportPath
           if ($exitCode -ne 0) { throw "Native headless startup self-test failed with exit code $exitCode." }
-          $startupLog = Get-Content -LiteralPath $logPath -Raw
-          if ($startupLog -notmatch 'PASS: self-test passed; signature catalog') { throw 'Startup log does not contain the self-test success record.' }
-          if ($startupLog -notmatch 'embedded application icon validated') { throw 'Startup log does not confirm embedded icon validation.' }
-          if ($startupLog -notmatch 'embedded asInvoker application manifest validated') { throw 'Startup log does not confirm manifest validation.' }
-          if ($startupLog -notmatch 'Windows x64 process reached Rust entry point') { throw 'Startup log does not confirm required process startup dependencies.' }
-          Write-Host 'Native Rust headless self-test passed. No egui context or native window was initialized; interactive GUI startup remains untested.'
+          if ($selfTestReport.schema_version -ne 1 -or $selfTestReport.mode -ne 'self-test') { throw 'Self-test JSON schema version or mode is invalid.' }
+          if ($selfTestReport.status -ne 'passed') { throw "Self-test report status is '$($selfTestReport.status)', expected 'passed'. Errors: $(@($selfTestReport.errors) -join '; ')" }
+          foreach ($check in @('runtime_dependencies','resources','signatures','configuration','scanner_core','arguments')) {
+            if ($selfTestReport.checks.PSObject.Properties.Name -notcontains $check) { throw "Required self-test check '$check' is missing from the JSON report." }
+            $checkStatus = $selfTestReport.checks.PSObject.Properties[$check].Value
+            if ($checkStatus -ne 'passed') { throw "Required self-test check '$check' is '$checkStatus', expected 'passed'." }
+          }
+          if (@($selfTestReport.errors).Count -gt 0) { throw "Self-test report contains errors: $(@($selfTestReport.errors) -join '; ')" }
+          Write-Host 'Native Rust headless self-test JSON report passed validation. No egui context or native window was initialized; interactive GUI startup remains untested.'
 
       - name: Upload startup diagnostics
         if: always()

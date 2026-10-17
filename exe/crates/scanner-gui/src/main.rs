@@ -3,6 +3,7 @@
 use eframe::egui;
 use scanner_core::{run_scan, ScanEvent, ScanReport};
 use std::{
+    collections::BTreeMap,
     fs::{self, OpenOptions},
     io::Write,
     path::PathBuf,
@@ -23,6 +24,16 @@ static NATIVE_BUILD_ID: &str = "MCS_NATIVE_RUST_SCANNER_V8";
 
 const EMBEDDED_ICON: &[u8] = include_bytes!("../../../assets/scanner.ico");
 const EMBEDDED_MANIFEST: &[u8] = include_bytes!("../../../assets/app.manifest");
+
+#[derive(serde::Serialize)]
+struct SelfTestReport {
+    schema_version: u32,
+    mode: &'static str,
+    status: &'static str,
+    checks: BTreeMap<String, String>,
+    details: BTreeMap<String, String>,
+    errors: Vec<String>,
+}
 
 #[derive(Clone)]
 struct StartupLog {
@@ -157,6 +168,238 @@ fn validate_embedded_app_resources(log: &StartupLog) -> Result<String, String> {
     Ok(format!(
         "self-test passed; Windows x64 startup imports resolved; embedded icon and manifest valid; signature catalog {catalog_version} ({signatures} entries); JVMTI agent {agent_status}; built-in read-only scanner defaults selected"
     ))
+}
+
+fn self_test_report_path(args: &[String], diagnostics: &StartupLog) -> (PathBuf, Option<String>) {
+    let fallback = diagnostics
+        .path
+        .as_ref()
+        .and_then(|path| path.parent())
+        .unwrap_or_else(|| std::path::Path::new("."))
+        .join("self-test-report.json");
+    let mut report_path = None;
+    let mut error = None;
+    let mut index = 0;
+    while index < args.len() {
+        if args[index] == "--self-test-report" {
+            if index + 1 >= args.len() || args[index + 1].starts_with("--") {
+                error = Some("--self-test-report requires a file path".to_owned());
+            } else if report_path.is_some() {
+                error = Some("--self-test-report may only be specified once".to_owned());
+            } else {
+                report_path = Some(PathBuf::from(&args[index + 1]));
+                index += 1;
+            }
+        }
+        index += 1;
+    }
+    let path = report_path.unwrap_or(fallback);
+    let path = if path.is_absolute() {
+        path
+    } else {
+        match std::env::current_dir() {
+            Ok(directory) => directory.join(path),
+            Err(current_dir_error) => {
+                error.get_or_insert_with(|| {
+                    format!("could not resolve self-test report path: {current_dir_error}")
+                });
+                path
+            }
+        }
+    };
+    (path, error)
+}
+
+fn run_self_test(args: &[String], diagnostics: &StartupLog) -> Result<(), String> {
+    let (report_path, argument_error) = self_test_report_path(args, diagnostics);
+    let mut checks = BTreeMap::new();
+    let mut details = BTreeMap::new();
+    let mut errors = Vec::new();
+
+    let runtime_ok = cfg!(target_os = "windows") && cfg!(target_arch = "x86_64");
+    checks.insert(
+        "runtime_dependencies".into(),
+        if runtime_ok { "passed" } else { "failed" }.into(),
+    );
+    details.insert(
+        "runtime_dependencies".into(),
+        if runtime_ok {
+            "Windows x64 process reached Rust entry point; the OS resolved startup imports. This does not test delayed GUI renderer dependencies.".into()
+        } else {
+            "This build is not running on Windows x64.".into()
+        },
+    );
+    if !runtime_ok {
+        errors.push("self-test requires Windows x64".into());
+    }
+
+    let resources_result = (|| -> Result<String, String> {
+        if EMBEDDED_ICON.len() < 6 || EMBEDDED_ICON[..4] != [0, 0, 1, 0] {
+            return Err("embedded application icon is missing or invalid".into());
+        }
+        let manifest = std::str::from_utf8(EMBEDDED_MANIFEST)
+            .map_err(|_| "embedded manifest is not valid UTF-8".to_owned())?;
+        if !manifest.contains("requestedExecutionLevel level=\"asInvoker\"") {
+            return Err("embedded manifest does not request asInvoker".into());
+        }
+        let agent = match embedded_agent::EMBEDDED_AGENT {
+            Some(bytes) if is_x64_dll(bytes) => "optional JVMTI agent is a valid x64 DLL",
+            Some(_) => return Err("embedded JVMTI agent is not a valid x64 DLL".into()),
+            None => "optional JVMTI agent is not embedded",
+        };
+        Ok(format!(
+            "embedded icon and asInvoker manifest validated; {agent}"
+        ))
+    })();
+    match resources_result {
+        Ok(detail) => {
+            checks.insert("resources".into(), "passed".into());
+            details.insert("resources".into(), detail);
+        }
+        Err(error) => {
+            checks.insert("resources".into(), "failed".into());
+            details.insert("resources".into(), error.clone());
+            errors.push(error);
+        }
+    }
+
+    match scanner_core::validate_embedded_catalog() {
+        Ok((version, count)) if count > 0 => {
+            checks.insert("signatures".into(), "passed".into());
+            details.insert(
+                "signatures".into(),
+                format!("catalog {version} parsed and validated ({count} entries)"),
+            );
+        }
+        Ok((version, _)) => {
+            let error = format!("signature catalog {version} contains no entries");
+            checks.insert("signatures".into(), "failed".into());
+            details.insert("signatures".into(), error.clone());
+            errors.push(error);
+        }
+        Err(error) => {
+            let error = format!("embedded signature catalog validation failed: {error}");
+            checks.insert("signatures".into(), "failed".into());
+            details.insert("signatures".into(), error.clone());
+            errors.push(error);
+        }
+    }
+
+    match scanner_core::validate_default_scan_configuration() {
+        Ok(()) => {
+            checks.insert("configuration".into(), "passed".into());
+            details.insert(
+                "configuration".into(),
+                "built-in bounded read-only scan configuration validated".into(),
+            );
+        }
+        Err(error) => {
+            checks.insert("configuration".into(), "failed".into());
+            details.insert("configuration".into(), error.clone());
+            errors.push(error);
+        }
+    }
+    let core_ok = checks.get("signatures").is_some_and(|v| v == "passed")
+        && checks.get("configuration").is_some_and(|v| v == "passed");
+    checks.insert(
+        "scanner_core".into(),
+        if core_ok { "passed" } else { "failed" }.into(),
+    );
+    details.insert(
+        "scanner_core".into(),
+        if core_ok {
+            "scanner core catalog and bounded defaults initialized".into()
+        } else {
+            "scanner core initialization failed; see signature/configuration checks".into()
+        },
+    );
+
+    if let Some(error) = argument_error {
+        checks.insert("arguments".into(), "failed".into());
+        details.insert("arguments".into(), error.clone());
+        errors.push(error);
+    } else {
+        checks.insert("arguments".into(), "passed".into());
+        details.insert("arguments".into(), "self-test arguments validated".into());
+    }
+
+    let passed = errors.is_empty() && checks.values().all(|status| status == "passed");
+    let report = SelfTestReport {
+        schema_version: 1,
+        mode: "self-test",
+        status: if passed { "passed" } else { "failed" },
+        checks,
+        details,
+        errors: errors
+            .iter()
+            .map(|error| redact_user_paths(error))
+            .collect(),
+    };
+    let bytes = serde_json::to_vec_pretty(&report)
+        .map_err(|error| format!("could not serialize self-test report: {error}"))?;
+    atomic_write(&report_path, &bytes).map_err(|error| {
+        format!(
+            "could not write self-test report {}: {error}",
+            report_path.display()
+        )
+    })?;
+    diagnostics.record(
+        "self-test",
+        &format!("{}; JSON report: {}", report.status, report_path.display()),
+    );
+    if passed {
+        Ok(())
+    } else {
+        Err(format!(
+            "self-test failed; see report at {}",
+            report_path.display()
+        ))
+    }
+}
+
+fn atomic_write(path: &std::path::Path, bytes: &[u8]) -> std::io::Result<()> {
+    let parent = path.parent().unwrap_or_else(|| std::path::Path::new("."));
+    fs::create_dir_all(parent)?;
+    let name = path.file_name().unwrap_or_default().to_string_lossy();
+    let nonce = SystemTime::now()
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_nanos();
+    let temp = parent.join(format!(".{name}.{}.{nonce}.tmp", std::process::id()));
+    let mut file = OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(&temp)?;
+    file.write_all(bytes)?;
+    file.sync_all()?;
+    drop(file);
+    #[cfg(windows)]
+    {
+        use std::os::windows::ffi::OsStrExt;
+        let from: Vec<u16> = temp.as_os_str().encode_wide().chain(Some(0)).collect();
+        let to: Vec<u16> = path.as_os_str().encode_wide().chain(Some(0)).collect();
+        #[link(name = "Kernel32")]
+        extern "system" {
+            fn MoveFileExW(existing: *const u16, new: *const u16, flags: u32) -> i32;
+        }
+        const MOVEFILE_REPLACE_EXISTING: u32 = 0x1;
+        const MOVEFILE_WRITE_THROUGH: u32 = 0x8;
+        let result = unsafe {
+            MoveFileExW(
+                from.as_ptr(),
+                to.as_ptr(),
+                MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH,
+            )
+        };
+        if result == 0 {
+            let error = std::io::Error::last_os_error();
+            let _ = fs::remove_file(&temp);
+            return Err(error);
+        }
+    }
+    #[cfg(not(windows))]
+    fs::rename(&temp, path)?;
+    Ok(())
 }
 
 #[derive(Default)]
@@ -379,26 +622,15 @@ fn main() {
 fn run_application(diagnostics: &StartupLog) -> Result<(), String> {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let self_test = args.iter().any(|arg| arg == "--self-test");
-    if self_test && !diagnostics.is_available() {
-        return Err("self-test could not create its required startup diagnostic log".into());
+    if self_test {
+        return run_self_test(&args, diagnostics);
     }
 
     diagnostics.record(
         "configuration",
         "using built-in read-only scan defaults; no external configuration is required",
     );
-    let self_test_summary = validate_embedded_app_resources(diagnostics)?;
-
-    if self_test {
-        diagnostics.record("self-test", "headless startup checks beginning");
-        diagnostics.record("self-test", &format!("PASS: {self_test_summary}"));
-        let mut stdout = std::io::stdout().lock();
-        let _ = writeln!(
-            stdout,
-            "{self_test_summary}; interactive window startup is not tested by this mode"
-        );
-        return Ok(());
-    }
+    validate_embedded_app_resources(diagnostics)?;
 
     let _ = tracing_subscriber::fmt().with_env_filter("info").try_init();
     tracing::info!(build_id = NATIVE_BUILD_ID, "native Rust scanner started");
@@ -439,7 +671,11 @@ fn run_application(diagnostics: &StartupLog) -> Result<(), String> {
 
 #[cfg(test)]
 mod tests {
-    use super::{is_x64_dll, EMBEDDED_ICON, EMBEDDED_MANIFEST};
+    use super::{
+        atomic_write, is_x64_dll, self_test_report_path, StartupLog, EMBEDDED_ICON,
+        EMBEDDED_MANIFEST,
+    };
+    use std::time::SystemTime;
 
     fn synthetic_pe(machine: u16, characteristics: u16) -> Vec<u8> {
         let mut bytes = vec![0u8; 0x100];
@@ -501,5 +737,36 @@ mod tests {
             assert!(!redacted.contains(&path));
             assert!(redacted.contains("<user-path>"));
         }
+    }
+
+    #[test]
+    fn self_test_report_argument_resolves_to_absolute_path() {
+        let args = vec![
+            "--self-test".to_owned(),
+            "--self-test-report".to_owned(),
+            "reports with spaces/self-test.json".to_owned(),
+        ];
+        let (path, error) = self_test_report_path(&args, &StartupLog { path: None });
+        assert!(error.is_none());
+        assert!(path.is_absolute());
+        assert!(path.ends_with("reports with spaces/self-test.json"));
+    }
+
+    #[test]
+    fn atomic_report_write_creates_and_replaces_complete_file() {
+        let directory = std::env::temp_dir().join(format!(
+            "mcs-self-test-{}-{}",
+            std::process::id(),
+            SystemTime::now()
+                .duration_since(SystemTime::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_nanos()
+        ));
+        let path = directory.join("self-test-report.json");
+        atomic_write(&path, br#"{"status":"failed"}"#).unwrap();
+        atomic_write(&path, br#"{"status":"passed"}"#).unwrap();
+        let content = std::fs::read_to_string(&path).unwrap();
+        assert_eq!(content, r#"{"status":"passed"}"#);
+        std::fs::remove_dir_all(directory).unwrap();
     }
 }

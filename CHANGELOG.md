@@ -153,3 +153,10 @@
 
 
 
+# 8.0.1
+
+- Replaced fragile GitHub Actions startup-log phrase matching with a versioned JSON self-test report written atomically to an explicit path.
+- The headless self-test now runs before GUI initialization and independently validates platform startup, embedded resources, signatures, scanner defaults, and scanner-core readiness. It returns failure and records actual errors when required checks fail.
+- Updated the Windows workflow to remove stale reports, invoke the freshly built native EXE with an absolute report path, capture its exit code/output, and validate the JSON schema and every required check.
+- Added tests for self-test report path resolution and atomic report replacement. A headless self-test does not validate interactive GUI rendering.
+

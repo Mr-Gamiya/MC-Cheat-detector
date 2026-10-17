@@ -114,10 +114,14 @@ fn load_catalog() -> Result<Catalog, String> {
 /// Validate the compiled-in signature catalog without starting a filesystem scan.
 /// Used by the native application's headless startup self-test.
 pub fn validate_embedded_catalog() -> Result<(String, usize), String> {
-    archive::validate_default_limits()
-        .map_err(|error| format!("built-in scanner limits are invalid: {error}"))?;
     let catalog = load_catalog()?;
     Ok((catalog.catalog_version, catalog.entries.len()))
+}
+
+/// Validate the read-only archive budgets used by the built-in scanner configuration.
+pub fn validate_default_scan_configuration() -> Result<(), String> {
+    archive::validate_default_limits()
+        .map_err(|error| format!("built-in scanner limits are invalid: {error}"))
 }
 fn user_name() -> String {
     env::var("USERNAME")
